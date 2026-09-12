@@ -248,14 +248,20 @@
     <div class="controls">
       <button id="prevBtn" class="btn" onclick="prevCat()" disabled>[← prev]</button>
       <button id="nextBtn" class="btn btn-primary" onclick="nextCat()">[next →]</button>
+      <button id="musicBtn" class="btn" onclick="toggleMusic()" title="Toggle Background Music (M)">[♫ music: off]</button>
       <button id="copyBtn" class="btn" onclick="copyUrl()">[copy url]</button>
       <button id="downloadBtn" class="btn" onclick="downloadCurrentCat()">[download]</button>
     </div>
 
     <div class="shortcuts-hint">
-      <kbd>←</kbd> <kbd>→</kbd> <kbd>space</kbd> navigate &nbsp;•&nbsp; <kbd>c</kbd> copy &nbsp;•&nbsp; <kbd>d</kbd> download
+      <kbd>←</kbd> <kbd>→</kbd> <kbd>space</kbd> navigate &nbsp;•&nbsp; <kbd>c</kbd> copy &nbsp;•&nbsp; <kbd>d</kbd> download &nbsp;•&nbsp; <kbd>m</kbd> music
     </div>
   </main>
+
+  <audio id="bgMusic" loop preload="auto">
+    <source src="silly%20cat.mp3" type="audio/mpeg">
+    <source src="silly cat.mp3" type="audio/mpeg">
+  </audio>
 
   <div id="toast" class="toast"></div>
 
@@ -537,6 +543,83 @@
         }
       }
 
+      // Background Music
+      const bgMusic = document.getElementById('bgMusic');
+      const musicBtn = document.getElementById('musicBtn');
+      let isMusicMuted = localStorage.getItem('katimages_music_muted') === 'true';
+
+      function updateMusicUI() {
+        if (!musicBtn || !bgMusic) return;
+        const isPaused = bgMusic.paused || bgMusic.muted;
+        musicBtn.textContent = isPaused ? '[♫ music: off]' : '[♫ music: on]';
+        musicBtn.title = isPaused ? 'Play Background Music (M)' : 'Pause Background Music (M)';
+      }
+
+      function playMusic() {
+        if (!bgMusic) return;
+        bgMusic.volume = 0.45;
+        bgMusic.muted = false;
+        const p = bgMusic.play();
+        if (p !== undefined) {
+          p.then(() => {
+            isMusicMuted = false;
+            localStorage.setItem('katimages_music_muted', 'false');
+            updateMusicUI();
+          }).catch(() => {
+            updateMusicUI();
+          });
+        }
+      }
+
+      function pauseMusic() {
+        if (!bgMusic) return;
+        bgMusic.pause();
+        isMusicMuted = true;
+        localStorage.setItem('katimages_music_muted', 'true');
+        updateMusicUI();
+      }
+
+      function toggleMusic() {
+        if (!bgMusic) return;
+        if (bgMusic.paused || bgMusic.muted) {
+          playMusic();
+          showToast('music playing');
+        } else {
+          pauseMusic();
+          showToast('music paused');
+        }
+      }
+
+      function initBackgroundMusic() {
+        if (!bgMusic) return;
+        bgMusic.volume = 0.45;
+        bgMusic.addEventListener('play', updateMusicUI);
+        bgMusic.addEventListener('pause', updateMusicUI);
+        updateMusicUI();
+
+        if (!isMusicMuted) {
+          const p = bgMusic.play();
+          if (p !== undefined) {
+            p.then(() => {
+              updateMusicUI();
+            }).catch(() => {
+              // Autoplay policy prevented playback, unlock on first user gesture
+              const unlockAudio = () => {
+                if (!isMusicMuted && bgMusic.paused) {
+                  bgMusic.play().then(() => updateMusicUI()).catch(() => {});
+                }
+                window.removeEventListener('click', unlockAudio);
+                window.removeEventListener('keydown', unlockAudio);
+                window.removeEventListener('touchstart', unlockAudio);
+              };
+              window.addEventListener('click', unlockAudio, { once: true });
+              window.addEventListener('keydown', unlockAudio, { once: true });
+              window.addEventListener('touchstart', unlockAudio, { once: true });
+            });
+          }
+        }
+      }
+
       // Keyboard navigation
       window.addEventListener('keydown', e => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -551,6 +634,8 @@
           copyUrl();
         } else if (e.key === 'd' || e.key === 'D') {
           downloadCurrentCat();
+        } else if (e.key === 'm' || e.key === 'M') {
+          toggleMusic();
         }
       });
 
@@ -559,9 +644,11 @@
       window.prevCat = prevCat;
       window.copyUrl = copyUrl;
       window.downloadCurrentCat = downloadCurrentCat;
+      window.toggleMusic = toggleMusic;
 
       // Start
       initInteractiveParticles();
+      initBackgroundMusic();
       nextCat();
       prefetchCats(3);
     })();
