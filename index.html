@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kat-images</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important; /* Square geometry matching KatDrop */
+    }
+
+    body {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #0b0b0b;
+      color: #e5e5e5;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 620px;
+      margin: 50px auto 40px;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .subtitle-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      color: #555;
+      text-transform: lowercase;
+    }
+
+    .status-sep {
+      color: #333;
+    }
+
+    .counter {
+      color: #777;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Image Viewer Frame */
+    .viewer {
+      position: relative;
+      width: 100%;
+      height: 60vh;
+      min-height: 320px;
+      background: rgba(16, 16, 16, 0.75);
+      border: 1px solid #222;
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: border-color 0.2s ease;
+    }
+
+    .viewer:hover {
+      border-color: #333;
+    }
+
+    .cat-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      user-select: none;
+    }
+
+    .cat-img.loaded {
+      opacity: 1;
+    }
+
+    /* Minimal Loader */
+    .loader {
+      position: absolute;
+      font-size: 0.76rem;
+      color: #555;
+      letter-spacing: 0.05em;
+      display: none;
+    }
+
+    .loader.active {
+      display: block;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.4; }
+      to { opacity: 0.9; }
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 18px;
+      background: #141414;
+      color: #ddd;
+      border: 1px solid #2a2a2a;
+      font-size: 0.78rem;
+      font-family: inherit;
+      cursor: pointer;
+      user-select: none;
+      letter-spacing: 0.02em;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #242424;
+      border-color: #4db8ff;
+      color: #4db8ff;
+    }
+
+    .btn:active:not(:disabled) {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+      border-color: #222;
+    }
+
+    .btn-primary {
+      background: #1a1a1a;
+      border-color: #383838;
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4db8ff;
+      border-color: #4db8ff;
+      color: #000;
+    }
+
+    /* Keyboard Shortcuts Hint */
+    .shortcuts-hint {
+      margin-top: 18px;
+      font-size: 0.7rem;
+      color: #444;
+      letter-spacing: 0.03em;
+    }
+
+    .shortcuts-hint kbd {
+      color: #666;
+      border: 1px solid #282828;
+      padding: 1px 5px;
+      background: #111;
+      font-family: inherit;
+    }
+
+    /* Minimal Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: #141414;
+      border: 1px solid #2f2f2f;
+      color: #ccc;
+      font-size: 0.75rem;
+      padding: 6px 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.15s ease;
+      z-index: 10;
+      letter-spacing: 0.02em;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="particles"></canvas>
+
+  <main class="container">
+    <header class="header">
+      <h1>kat-images</h1>
+      <div class="subtitle-row">
+        <span class="subtitle">// random cat images</span>
+        <span class="status-sep">•</span>
+        <span id="counter" class="counter">image 0 / 0</span>
+      </div>
+    </header>
+
+    <div class="viewer" id="viewer">
+      <div id="loader" class="loader">// fetching cat...</div>
+      <img id="catImage" class="cat-img" alt="random cat">
+    </div>
+
+    <div class="controls">
+      <button id="prevBtn" class="btn" onclick="prevCat()" disabled>[← prev]</button>
+      <button id="nextBtn" class="btn btn-primary" onclick="nextCat()">[next →]</button>
+      <button id="copyBtn" class="btn" onclick="copyUrl()">[copy url]</button>
+      <button id="downloadBtn" class="btn" onclick="downloadCurrentCat()">[download]</button>
+    </div>
+
+    <div class="shortcuts-hint">
+      <kbd>←</kbd> <kbd>→</kbd> <kbd>space</kbd> navigate &nbsp;•&nbsp; <kbd>c</kbd> copy &nbsp;•&nbsp; <kbd>d</kbd> download
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // State & Cache
+      let history = [];
+      let currentIndex = -1;
+      let preloadQueue = [];
+      let isFetching = false;
+
+      // DOM Elements
+      const catImage = document.getElementById('catImage');
+      const loader = document.getElementById('loader');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const counter = document.getElementById('counter');
+      const toastEl = document.getElementById('toast');
+
+      // Minimal Toast
+      let toastTimeout;
+      function showToast(msg) {
+        clearTimeout(toastTimeout);
+        toastEl.textContent = `// ${msg}`;
+        toastEl.classList.add('show');
+        toastTimeout = setTimeout(() => {
+          toastEl.classList.remove('show');
+        }, 2200);
+      }
+
+      // Interactive Particles Background (identical 60fps canvas engine from KatDrop)
+      function initInteractiveParticles() {
+        const canvas = document.getElementById('particles');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let width = (canvas.width = window.innerWidth);
+        let height = (canvas.height = window.innerHeight);
+
+        window.addEventListener('resize', () => {
+          width = canvas.width = window.innerWidth;
+          height = canvas.height = window.innerHeight;
+        });
+
+        const mouse = { x: null, y: null, radius: 140 };
+
+        window.addEventListener('mousemove', e => {
+          mouse.x = e.clientX;
+          mouse.y = e.clientY;
+        });
+
+        window.addEventListener('mouseleave', () => {
+          mouse.x = null;
+          mouse.y = null;
+        });
+
+        window.addEventListener('click', e => {
+          for (const p of particles) {
+            const dx = p.x - e.clientX;
+            const dy = p.y - e.clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 180 && dist > 0) {
+              const force = (180 - dist) / 180;
+              p.vx += (dx / dist) * force * 3;
+              p.vy += (dy / dist) * force * 3;
+            }
+          }
+        });
+
+        const particles = [];
+        const count = Math.min(50, Math.floor(width / 26));
+
+        for (let i = 0; i < count; i++) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.45,
+            vy: (Math.random() - 0.5) * 0.45,
+            radius: Math.random() * 1.5 + 1
+          });
+        }
+
+        function animate() {
+          ctx.clearRect(0, 0, width, height);
+
+          for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+              const dx = particles[i].x - particles[j].x;
+              const dy = particles[i].y - particles[j].y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < 115) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.06 * (1 - dist / 115)})`;
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(particles[i].x, particles[i].y);
+                ctx.lineTo(particles[j].x, particles[j].y);
+                ctx.stroke();
+              }
+            }
+          }
+
+          for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.985;
+            p.vy *= 0.985;
+
+            if (p.x < 0) { p.x = 0; p.vx *= -1; }
+            if (p.x > width) { p.x = width; p.vx *= -1; }
+            if (p.y < 0) { p.y = 0; p.vy *= -1; }
+            if (p.y > height) { p.y = height; p.vy *= -1; }
+
+            if (mouse.x !== null && mouse.y !== null) {
+              const mdx = mouse.x - p.x;
+              const mdy = mouse.y - p.y;
+              const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+
+              if (mDist < mouse.radius) {
+                ctx.strokeStyle = `rgba(77, 184, 255, ${0.18 * (1 - mDist / mouse.radius)})`;
+                ctx.lineWidth = 0.9;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(mouse.x, mouse.y);
+                ctx.stroke();
+
+                if (mDist < 70 && mDist > 0) {
+                  const repel = (70 - mDist) / 70;
+                  p.x -= (mdx / mDist) * repel * 1.5;
+                  p.y -= (mdy / mDist) * repel * 1.5;
+                }
+              }
+            }
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          requestAnimationFrame(animate);
+        }
+
+        animate();
+      }
+
+      // Background Pre-loader: fetches ahead so clicking Next is instant!
+      async function prefetchCats(count = 3) {
+        if (preloadQueue.length >= count || isFetching) return;
+        try {
+          const res = await fetch(`https://api.thecatapi.com/v1/images/search?limit=${count}`);
+          const data = await res.json();
+          data.forEach(item => {
+            if (item && item.url) {
+              preloadQueue.push(item.url);
+              // Pre-buffer in browser cache
+              const img = new Image();
+              img.src = item.url;
+            }
+          });
+        } catch (e) {
+          // Ignore prefetch network errors silently
+        }
+      }
+
+      // Render image
+      function displayImage(url) {
+        catImage.classList.remove('loaded');
+        loader.classList.add('active');
+
+        const temp = new Image();
+        temp.onload = () => {
+          catImage.src = url;
+          catImage.classList.add('loaded');
+          loader.classList.remove('active');
+        };
+        temp.onerror = () => {
+          loader.textContent = '// failed to load image';
+          loader.classList.add('active');
+        };
+        temp.src = url;
+
+        updateUI();
+      }
+
+      function updateUI() {
+        prevBtn.disabled = currentIndex <= 0;
+        counter.textContent = `image ${currentIndex + 1} / ${history.length}`;
+      }
+
+      // Next Cat
+      async function nextCat() {
+        // If navigating forward within existing history
+        if (currentIndex < history.length - 1) {
+          currentIndex++;
+          displayImage(history[currentIndex]);
+          return;
+        }
+
+        // Check preloaded queue for instant transition
+        if (preloadQueue.length > 0) {
+          const url = preloadQueue.shift();
+          history.push(url);
+          currentIndex++;
+          displayImage(url);
+          prefetchCats(3); // Refill queue in background
+          return;
+        }
+
+        // Direct fetch fallback
+        isFetching = true;
+        loader.textContent = '// fetching cat...';
+        loader.classList.add('active');
+
+        try {
+          const res = await fetch('https://api.thecatapi.com/v1/images/search?limit=1');
+          const data = await res.json();
+          if (data && data[0] && data[0].url) {
+            const url = data[0].url;
+            history.push(url);
+            currentIndex++;
+            displayImage(url);
+          }
+        } catch (err) {
+          loader.textContent = '// network error, retry';
+          showToast('error fetching cat image');
+        } finally {
+          isFetching = false;
+          prefetchCats(3);
+        }
+      }
+
+      // Prev Cat
+      function prevCat() {
+        if (currentIndex > 0) {
+          currentIndex--;
+          displayImage(history[currentIndex]);
+        }
+      }
+
+      // Copy current URL
+      function copyUrl() {
+        if (currentIndex >= 0 && history[currentIndex]) {
+          navigator.clipboard.writeText(history[currentIndex]).then(() => {
+            showToast('image url copied');
+          }).catch(() => {
+            prompt('Copy URL:', history[currentIndex]);
+          });
+        }
+      }
+
+      // Force true file download via Blob (bypasses cross-origin download restrictions)
+      async function downloadCurrentCat() {
+        if (currentIndex < 0 || !history[currentIndex]) return;
+        const url = history[currentIndex];
+        showToast('downloading image...');
+
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const ext = url.split('.').pop().split(/[?#]/)[0] || 'jpg';
+          const blobUrl = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `cat_${Date.now()}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+          showToast('saved to downloads');
+        } catch (err) {
+          // Direct link fallback if CORS restricts blob download
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.download = 'cat.jpg';
+          a.click();
+        }
+      }
+
+      // Keyboard navigation
+      window.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          nextCat();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevCat();
+        } else if (e.key === 'c' || e.key === 'C') {
+          copyUrl();
+        } else if (e.key === 'd' || e.key === 'D') {
+          downloadCurrentCat();
+        }
+      });
+
+      // Expose to window for button onclick
+      window.nextCat = nextCat;
+      window.prevCat = prevCat;
+      window.copyUrl = copyUrl;
+      window.downloadCurrentCat = downloadCurrentCat;
+
+      // Start
+      initInteractiveParticles();
+      nextCat();
+      prefetchCats(3);
+    })();
+  </script>
+</body>
+</html>
