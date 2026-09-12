@@ -1,15 +1,15 @@
-# kat-images
+# katimages
 
-a minimal, smooth random cat image viewer.
+look at cat. feel good.
 
 ## features
 
-- minimal dark interface matching katdrop aesthetic
+- minimal dark interface
 - interactive 60fps canvas particle background
-- background pre-fetching for instant image transitions
-- blob-based cross-origin download support
-- full keyboard navigation (`←` / `→` / `space` / `c` / `d`)
-- zero external dependencies (self-contained)
+- background pre-fetching for instant cats
+- blob-based cross-origin cat downloads
+- keyboard navigation (`←` / `→` / `space` / `c` / `d`)
+- zero dependencies, pure cats
 
 ## license
 
