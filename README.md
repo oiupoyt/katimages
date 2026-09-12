@@ -2,7 +2,7 @@
 
 meorw
 
-🌐 **Website**: [kats.oiupoyt.space](https://kats.oiupoyt.space)
+↗ [kats.oiupoyt.space](https://kats.oiupoyt.space)
 
 ## features
 - cats
