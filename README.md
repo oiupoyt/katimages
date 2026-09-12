@@ -2,6 +2,8 @@
 
 meorw
 
+🌐 **Website**: [kats.oiupoyt.space](https://kats.oiupoyt.space)
+
 ## features
 - cats
 - minimal dark interface
